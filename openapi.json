@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moonshit Architect API",
-    "version": "5.0.0",
+    "version": "6.0.0",
     "description": "Full-stack AI DevOps API enabling GPT to edit the website, upload assets, run Python, commit files to GitHub, restore history, trigger builds, download backups, and inspect logs."
   },
   "servers": [
