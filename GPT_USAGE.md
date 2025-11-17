@@ -6,9 +6,20 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 
 ## Quick Setup for AI Agents
 - **Authentication**: No auth required for the API itself, but ensure your environment has the necessary env vars set (e.g., for commits).
-- **Workflow Mindset**: Think in steps—update files, commit changes, deploy. Use `/commit` after batches of edits to persist work.
+- **Workflow Mindset**: Think in steps—sync first, update files in `/public` only, commit changes, deploy. Use `/commit` after batches of edits to persist work.
 - **Error Handling**: Always check `success` in responses. If false, log the error and retry or notify.
 - **Rate Limiting**: Be mindful of API calls; space them out if needed.
+- **Security**: Only edit files in `/public`. Never modify server files, configs, or anything outside `/public`—the API blocks it.
+
+## Proper Workflow for Safe Repo Handling
+To avoid deleting or overwriting files accidentally, follow this strict workflow. This ensures you only touch `/public` and keep the repo intact.
+
+1. **Sync the Repo**: Always start with `POST /repo` (no body). This pulls the latest `/public` from GitHub into the local server.
+2. **Edit Files**: Use `/file` endpoints to create, update, or delete files **only in `/public`**.
+3. **Commit Changes**: End with `POST /commit` to push your edits to GitHub.
+4. **Monitor/Backup**: Use `/logs`, `/backup`, etc., as needed.
+
+Example: Before building a site, sync → edit `/public/index.html` → commit. This prevents conflicts and keeps other files safe.
 
 ## Endpoints Overview
 
@@ -53,14 +64,13 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - End of workflow: Always call this to persist changes.
 
-### 4. `/build` (POST) - Run Shell Command
-**Parameters**:
-- `command` (string): Shell command to execute
+### 4. `/build` (POST) - Run Build Command
+**Description**: Runs `npm run build` to build the project.
 
 **Response**: `{ "success": true, "stdout": "Output", "stderr": "" }`
 
 **AI Workflow Example**:
-- Build: `{"command": "npm run build"}`
+- Build: `POST /build` (no body needed)
 
 ### 5. `/run-python` (POST) - Execute Python
 **Parameters**:
@@ -142,24 +152,27 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 ## Real-Life Workflows
 
 ### Easy Workflow: Build a Simple Blog
-1. Use `/file` POST to create `index.html`.
-2. Add CSS via `/file` POST.
-3. Upload images with `/file` POST (base64=true).
-4. Call `/commit` with message.
-5. Site deploys automatically.
+1. Sync: `POST /repo`.
+2. Use `/file` POST to create `index.html`.
+3. Add CSS via `/file` POST.
+4. Upload images with `/file` POST (base64=true).
+5. Call `/commit` with message.
+6. Site deploys automatically.
 
 ### Advanced Workflow: AI-Generated Portfolio
-1. Generate content with your model.
-2. Use `/run-python` to process data.
-3. Update multiple files with `/file` POST.
-4. Commit via `/commit`.
-5. Monitor with `/logs`.
+1. Sync: `POST /repo`.
+2. Generate content with your model.
+3. Use `/run-python` to process data.
+4. Update multiple files with `/file` POST.
+5. Commit via `/commit`.
+6. Monitor with `/logs`.
 
 ### Complex Workflow: E-Commerce Site
-1. Create product pages in a loop using `/file` POST.
-2. Run Python for inventory.
-3. Batch commit with `/commit`.
-4. Build with `/build`.
-5. Backup with `/backup`.
+1. Sync: `POST /repo`.
+2. Create product pages in a loop using `/file` POST.
+3. Run Python for inventory.
+4. Batch commit with `/commit`.
+5. Build with `/build`.
+6. Backup with `/backup`.
 
-Remember, AI agents: Be creative! Combine endpoints for seamless site building. If something fails, retry or log it. Happy coding! 🤖
+Remember, AI agents: Always sync first, edit only in `/public`, and commit to save. Be creative! Combine endpoints for seamless site building. If something fails, retry or log it. Happy coding! 🤖
