@@ -31,6 +31,11 @@ const LOGS_DIR = path.join(__dirname, "logs");
 // Track changed files for batch commits
 const changedFiles = new Set();
 
+// Metrics
+let requestCount = 0;
+let commitCount = 0;
+let startTime = Date.now();
+
 const { Octokit } = require("@octokit/rest");
 // GitHub API client
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -116,28 +121,398 @@ async function commitAllChanges(commitMessage) {
   changedFiles.clear();
 }
 
+// Middleware for metrics
+app.use((req, res, next) => {
+  requestCount++;
+  next();
+});
+
 // ------------------------------------------------------------
-// 1. update-site  (Create/overwrite text files)
+// 1. /file - Create/Update/Read/Delete files
 // ------------------------------------------------------------
 
-app.post("/update-site", (req, res) => {
-  const { filename, content } = req.body;
+app.route('/file')
+  .post((req, res) => {
+    const { filename, content, base64 = false } = req.body;
+    if (!filename) return res.status(400).json({ error: "Missing filename." });
 
-  if (!filename || !content)
-    return res.status(400).json({ error: "Missing filename or content." });
+    const filePath = path.join(PUBLIC_DIR, filename);
+    if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+      return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+    }
 
-  const filePath = path.join(PUBLIC_DIR, filename);
-  // Security check: ensure filePath is within PUBLIC_DIR
-  if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
-    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    if (base64) {
+      const buffer = Buffer.from(content, 'base64');
+      fs.writeFileSync(filePath, buffer);
+    } else {
+      fs.writeFileSync(filePath, content);
+    }
+    changedFiles.add(filename);
+    res.json({ success: true, file: filename });
+  })
+  .get((req, res) => {
+    const filename = req.query.filename;
+    if (!filename) return res.status(400).json({ error: "Missing filename." });
+
+    const filePath = path.join(PUBLIC_DIR, filename);
+    if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+      return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+    }
+
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found." });
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.json({ filename, content });
+  })
+  .delete((req, res) => {
+    const filename = req.query.filename;
+    if (!filename) return res.status(400).json({ error: "Missing filename." });
+
+    const filePath = path.join(PUBLIC_DIR, filename);
+    if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+      return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+    }
+
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found." });
+    fs.unlinkSync(filePath);
+    changedFiles.add(filename);
+    res.json({ success: true, deleted: filename });
+  });
+
+// ------------------------------------------------------------
+// 2. /files - List files in /public
+// ------------------------------------------------------------
+
+app.get('/files', (req, res) => {
+  const filter = req.query.filter;
+  const dir = req.query.dir;
+
+  function walk(dirPath, relPath = '') {
+    let results = [];
+    if (!fs.existsSync(dirPath)) return results;
+    const list = fs.readdirSync(dirPath);
+    for (let file of list) {
+      const full = path.join(dirPath, file);
+      const rel = path.join(relPath, file);
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) {
+        results = results.concat(walk(full, rel));
+      } else {
+        if (!filter || rel.endsWith(filter)) {
+          results.push(rel);
+        }
+      }
+    }
+    return results;
   }
 
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
+  let startDir = PUBLIC_DIR;
+  if (dir) {
+    startDir = path.join(PUBLIC_DIR, dir);
+    if (!path.resolve(startDir).startsWith(path.resolve(PUBLIC_DIR))) {
+      return res.status(400).json({ error: "Invalid dir." });
+    }
+  }
+  const files = walk(startDir);
+  res.json({ files });
+});
 
-  changedFiles.add(filename);
+// ------------------------------------------------------------
+// 3. /commit - Commit changes to GitHub
+// ------------------------------------------------------------
 
-  res.json({ success: true, file: filename });
+app.post('/commit', async (req, res) => {
+  const { commit_message, dry_run = false } = req.body;
+  if (!commit_message) return res.status(400).json({ error: "Missing commit_message." });
+
+  if (dry_run) {
+    return res.json({ success: true, changes: Array.from(changedFiles) });
+  }
+
+  try {
+    await commitAllChanges(commit_message);
+    commitCount++;
+    res.json({ success: true, message: "Changes committed and pushed." });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// ------------------------------------------------------------
+// 4. /build - Run shell command
+// ------------------------------------------------------------
+
+app.post('/build', (req, res) => {
+  const { command } = req.body;
+  if (!command) return res.status(400).json({ error: "Missing command." });
+
+  exec(command, { cwd: __dirname }, (err, stdout, stderr) => {
+    res.json({
+      success: !err,
+      stdout: stdout || "",
+      stderr: stderr || ""
+    });
+  });
+});
+
+// ------------------------------------------------------------
+// 5. /run-python - Execute Python
+// ------------------------------------------------------------
+
+app.post('/run-python', (req, res) => {
+  const { filename, code, timeout = 30 } = req.body;
+  if (!filename || !code) return res.status(400).json({ error: "Missing filename or code." });
+
+  const safeName = filename.endsWith('.py') ? filename : filename + '.py';
+  const filePath = path.join(PYTHON_DIR, safeName);
+  if (!path.resolve(filePath).startsWith(path.resolve(PYTHON_DIR))) {
+    return res.status(400).json({ error: "Invalid filename." });
+  }
+
+  fs.writeFileSync(filePath, code);
+  const cmd = `timeout ${timeout}s python3 -I -B -E -s "${filePath}"`;
+
+  exec(cmd, { cwd: PYTHON_DIR }, (err, stdout, stderr) => {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    res.json({
+      success: !err,
+      filename: safeName,
+      stdout: stdout || "",
+      stderr: stderr || ""
+    });
+  });
+});
+
+// ------------------------------------------------------------
+// 6. /logs - Fetch logs
+// ------------------------------------------------------------
+
+app.get('/logs', async (req, res) => {
+  const lines = parseInt(req.query.lines) || 100;
+  const type = req.query.type || 'commits';
+  const search = req.query.search;
+
+  if (type === 'commits') {
+    const logPath = path.join(LOGS_DIR, 'commits.log');
+    if (!fs.existsSync(logPath)) return res.json({ logs: [] });
+    let logs = fs.readFileSync(logPath, 'utf8').split('\n').filter(l => l).reverse().slice(0, lines);
+    if (search) logs = logs.filter(l => l.includes(search));
+    res.json({ logs });
+  } else if (type === 'system') {
+    try {
+      const sessionResponse = await fetch(`https://api.heroku.com/apps/${process.env.HEROKU_APP}/log-sessions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.HEROKU_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.heroku+json; version=3'
+        },
+        body: JSON.stringify({ lines })
+      });
+      if (!sessionResponse.ok) throw new Error(`API error: ${sessionResponse.status}`);
+      const session = await sessionResponse.json();
+      const logsResponse = await fetch(session.logplex_url);
+      let logs = await logsResponse.text();
+      logs = logs.split('\n').filter(l => l).reverse().slice(0, lines);
+      if (search) logs = logs.filter(l => l.includes(search));
+      res.json({ logs });
+    } catch (err) {
+      res.json({ error: err.message });
+    }
+  } else {
+    res.status(400).json({ error: "Invalid type." });
+  }
+});
+
+// ------------------------------------------------------------
+// 7. /backup - Download backup
+// ------------------------------------------------------------
+
+app.get('/backup', (req, res) => {
+  const zipPath = path.join(os.tmpdir(), "backup.zip");
+  const output = fs.createWriteStream(zipPath);
+  const archive = archiver("zip");
+
+  archive.pipe(output);
+  archive.directory(PUBLIC_DIR, "public");
+  archive.directory(PYTHON_DIR, "python_sandbox");
+
+  const manifest = { fileCount: 0, totalSize: 0, timestamp: new Date().toISOString() };
+  function countFiles(dir) {
+    if (!fs.existsSync(dir)) return;
+    const list = fs.readdirSync(dir);
+    for (let file of list) {
+      const full = path.join(dir, file);
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) countFiles(full);
+      else { manifest.fileCount++; manifest.totalSize += stat.size; }
+    }
+  }
+  countFiles(PUBLIC_DIR);
+  countFiles(PYTHON_DIR);
+  archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+
+  archive.finalize();
+  output.on("close", () => {
+    res.download(zipPath, "backup.zip");
+  });
+});
+
+// ------------------------------------------------------------
+// 8. /env - Manage environment variables
+// ------------------------------------------------------------
+
+app.route('/env')
+  .get((req, res) => {
+    const env = Object.keys(process.env).filter(k => !k.toLowerCase().includes('secret') && !k.toLowerCase().includes('key')).map(k => ({
+      key: k,
+      value: k.toLowerCase().includes('token') ? '***' : process.env[k]
+    }));
+    res.json({ env });
+  })
+  .post((req, res) => {
+    for (const [key, value] of Object.entries(req.body)) {
+      process.env[key] = value;
+    }
+    res.json({ success: true, message: "Env vars updated in memory." });
+  });
+
+// ------------------------------------------------------------
+// 9. /status - System status
+// ------------------------------------------------------------
+
+app.get('/status', (req, res) => {
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const uptimeStr = `${hours}h ${minutes}m`;
+  res.json({
+    uptime: uptimeStr,
+    node_version: process.version,
+    git_connected: !!process.env.GITHUB_TOKEN,
+    repo: process.env.GITHUB_REPO
+  });
+});
+
+// ------------------------------------------------------------
+// 10. /diff - Compare local vs GitHub
+// ------------------------------------------------------------
+
+app.get('/diff', async (req, res) => {
+  try {
+    const [owner, repo] = process.env.GITHUB_REPO.split('/');
+    const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
+    const { data: commit } = await octokit.git.getCommit({ owner, repo, sha: ref.object.sha });
+    const { data: tree } = await octokit.git.getTree({ owner, repo, tree_sha: commit.tree.sha, recursive: true });
+
+    const githubFiles = new Set(tree.tree.filter(item => item.type === 'blob' && item.path.startsWith('public/')).map(item => item.path.slice(7)));
+    const localFiles = new Set();
+
+    function walk(dir, rel = '') {
+      if (!fs.existsSync(dir)) return;
+      const list = fs.readdirSync(dir);
+      for (let file of list) {
+        const full = path.join(dir, file);
+        const stat = fs.statSync(full);
+        if (stat.isDirectory()) walk(full, path.join(rel, file));
+        else localFiles.add(path.join(rel, file));
+      }
+    }
+    walk(PUBLIC_DIR);
+
+    const added = [...localFiles].filter(f => !githubFiles.has(f));
+    const deleted = [...githubFiles].filter(f => !localFiles.has(f));
+    const modified = [...changedFiles];
+    res.json({ added, deleted, modified });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
+// ------------------------------------------------------------
+// 11. /exec - Run safe shell commands
+// ------------------------------------------------------------
+
+const safeCommands = ['ls', 'pwd', 'df -h', 'free -h', 'uptime', 'whoami', 'date'];
+app.post('/exec', (req, res) => {
+  const { command } = req.body;
+  if (!command) return res.status(400).json({ error: "Missing command." });
+
+  const cmd = command.split(' ')[0];
+  if (!safeCommands.includes(cmd)) return res.status(400).json({ error: "Command not allowed." });
+
+  exec(command, (err, stdout, stderr) => {
+    res.json({
+      success: !err,
+      stdout: stdout || "",
+      stderr: stderr || ""
+    });
+  });
+});
+
+// ------------------------------------------------------------
+// 12. /health - Readiness probe
+// ------------------------------------------------------------
+
+app.get('/health', async (req, res) => {
+  try {
+    const [owner, repo] = process.env.GITHUB_REPO.split('/');
+    await octokit.repos.get({ owner, repo });
+    res.json({ status: 'healthy', git_connected: true });
+  } catch (err) {
+    res.status(503).json({ status: 'unhealthy', error: err.message });
+  }
+});
+
+// ------------------------------------------------------------
+// 13. /repo - Repo info and sync
+// ------------------------------------------------------------
+
+app.route('/repo')
+  .get(async (req, res) => {
+    try {
+      const [owner, repo] = process.env.GITHUB_REPO.split('/');
+      const { data: commits } = await octokit.repos.listCommits({ owner, repo, per_page: 1 });
+      res.json({ latest_commit: commits[0] });
+    } catch (err) {
+      res.json({ error: err.message });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const [owner, repo] = process.env.GITHUB_REPO.split('/');
+      const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
+      const { data: commit } = await octokit.git.getCommit({ owner, repo, sha: ref.object.sha });
+      const { data: tree } = await octokit.git.getTree({ owner, repo, tree_sha: commit.tree.sha, recursive: true });
+
+      for (const item of tree.tree) {
+        if (item.type === 'blob' && item.path.startsWith('public/')) {
+          const localPath = path.join(__dirname, item.path);
+          if (!path.resolve(localPath).startsWith(path.resolve(PUBLIC_DIR))) continue;
+          fs.mkdirSync(path.dirname(localPath), { recursive: true });
+          const { data: blob } = await octokit.git.getBlob({ owner, repo, file_sha: item.sha });
+          fs.writeFileSync(localPath, Buffer.from(blob.content, 'base64'));
+        }
+      }
+      res.json({ success: true, message: "Synced from GitHub." });
+    } catch (err) {
+      res.json({ success: false, error: err.message });
+    }
+  });
+
+// ------------------------------------------------------------
+// 14. /metrics - System metrics
+// ------------------------------------------------------------
+
+app.get('/metrics', (req, res) => {
+  const uptime = process.uptime();
+  res.json({
+    uptime_seconds: uptime,
+    requests_served: requestCount,
+    commits_made: commitCount,
+    node_version: process.version,
+    repo: process.env.GITHUB_REPO
+  });
 });
 
 // ------------------------------------------------------------
