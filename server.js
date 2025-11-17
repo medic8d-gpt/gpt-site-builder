@@ -12,6 +12,17 @@ const os = require("os");
 const { Octokit } = require("@octokit/rest");
 const fetch = require("node-fetch");
 
+// ---- FIX: Load env vars BEFORE anything uses them ----
+const GITHUB_USER = process.env.GITHUB_USER;
+const GITHUB_EMAIL = process.env.GITHUB_EMAIL;
+const GITHUB_REPO = process.env.GITHUB_REPO; // e.g. "username/repo"
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const HEROKU_APP = process.env.HEROKU_APP;
+const HEROKU_API_KEY = process.env.HEROKU_API_KEY;
+
+// GitHub API client
+const octokit = new Octokit({ auth: GITHUB_TOKEN });
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -33,21 +44,6 @@ const git = simpleGit({
     console.error('Git config error:', err);
   }
 })();
-const PUBLIC_DIR = path.join(__dirname, "public");
-const PYTHON_DIR = path.join(__dirname, "python_sandbox");
-const LOGS_DIR = path.join(__dirname, "logs");
-
-// Track changed files for batch commits
-const changedFiles = new Set();
-
-// GitHub API client
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-
-const GITHUB_USER = process.env.GITHUB_USER;
-const GITHUB_EMAIL = process.env.GITHUB_EMAIL;
-const GITHUB_REPO = process.env.GITHUB_REPO; // e.g. "username/repo"
-
-// Git Setup (kept for other endpoints, but commits use API)
 
 // Middleware --------------------------------------------------
 
