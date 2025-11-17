@@ -3,7 +3,7 @@
   "info": {
     "title": "GPT Website Control API",
     "version": "2.0.0",
-    "description": "Full API for GPT to create, edit, delete, list, upload, and build files on the Heroku website."
+    "description": "Full API to let a GPT create, edit, read, delete, upload, list, and build website files on the Heroku server."
   },
   "servers": [
     {
@@ -14,45 +14,129 @@
   "paths": {
     "/update-site": {
       "post": {
-        "summary": "Create or update a text-based file in /public",
-        "operationId": "updateSite",
-        "requestBody": { "required": true },
-        "responses": { "200": { "description": "OK" } }
+        "summary": "Create or update a text file in /public",
+        "operationId": "updateSiteFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["filename", "content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File written successfully." }
+        }
       }
     },
     "/list-files": {
       "get": {
-        "summary": "List all files in /public recursively",
+        "summary": "List all files in /public",
         "operationId": "listFiles",
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "List of files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/read-file": {
       "post": {
-        "summary": "Read the content of a file in /public",
+        "summary": "Read a file from /public",
         "operationId": "readFile",
-        "responses": { "200": { "description": "OK" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" }
+                },
+                "required": ["filename"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Returns file content." }
+        }
       }
     },
     "/delete-file": {
       "post": {
         "summary": "Delete a file in /public",
         "operationId": "deleteFile",
-        "responses": { "200": { "description": "OK" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" }
+                },
+                "required": ["filename"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File deleted." }
+        }
       }
     },
     "/upload-asset": {
       "post": {
-        "summary": "Upload binary file (images/audio/etc) using base64",
+        "summary": "Upload binary asset using base64",
         "operationId": "uploadAsset",
-        "responses": { "200": { "description": "OK" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "base64": { "type": "string" }
+                },
+                "required": ["filename", "base64"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Asset uploaded." }
+        }
       }
     },
     "/trigger-build": {
       "post": {
-        "summary": "Trigger a site build (React/Vite/Static Generator)",
+        "summary": "Run the site build script",
         "operationId": "triggerBuild",
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": { "description": "Build triggered." }
+        }
       }
     }
   }
