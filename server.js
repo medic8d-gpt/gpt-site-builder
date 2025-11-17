@@ -55,12 +55,21 @@ if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
 // Function to commit all changes via GitHub API
 async function commitAllChanges(commitMessage) {
   const [owner, repo] = process.env.GITHUB_REPO.split('/');
-  // Get latest commit SHA
-  const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
-  const latestCommitSha = ref.object.sha;
-  // Get commit and tree
-  const { data: commit } = await octokit.git.getCommit({ owner, repo, sha: latestCommitSha });
-  const baseTreeSha = commit.tree.sha;
+  let latestCommitSha = null;
+  let baseTreeSha = null;
+
+  try {
+    // Try to get the latest commit
+    const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
+    latestCommitSha = ref.object.sha;
+    const { data: commit } = await octokit.git.getCommit({ owner, repo, sha: latestCommitSha });
+    baseTreeSha = commit.tree.sha;
+  } catch (err) {
+    if (err.status !== 404) throw err;
+    // Repo is empty, no ref yet
+    console.log('Repo appears empty, creating initial commit');
+  }
+
   // Create tree entries for changed files
   const tree = [];
   for (const filename of changedFiles) {
@@ -74,12 +83,33 @@ async function commitAllChanges(commitMessage) {
   if (tree.length === 0) {
     throw new Error('No changes to commit');
   }
+
   // Create new tree
-  const { data: newTree } = await octokit.git.createTree({ owner, repo, base_tree: baseTreeSha, tree });
+  const treeOptions = baseTreeSha ? { owner, repo, base_tree: baseTreeSha, tree } : { owner, repo, tree };
+  const { data: newTree } = await octokit.git.createTree(treeOptions);
+
   // Create commit
-  const { data: newCommit } = await octokit.git.createCommit({ owner, repo, message: commitMessage, tree: newTree.sha, parents: [latestCommitSha] });
-  // Update ref
-  await octokit.git.updateRef({ owner, repo, ref: 'heads/main', sha: newCommit.sha });
+  const commitOptions = {
+    owner,
+    repo,
+    message: commitMessage,
+    tree: newTree.sha,
+    parents: latestCommitSha ? [latestCommitSha] : []
+  };
+  const { data: newCommit } = await octokit.git.createCommit(commitOptions);
+
+  // Update or create ref
+  try {
+    await octokit.git.updateRef({ owner, repo, ref: 'heads/main', sha: newCommit.sha });
+  } catch (err) {
+    if (err.status === 422) {
+      // Ref doesn't exist, create it
+      await octokit.git.createRef({ owner, repo, ref: 'refs/heads/main', sha: newCommit.sha });
+    } else {
+      throw err;
+    }
+  }
+
   // Log
   const logEntry = `${new Date().toISOString()} - Committed changes: ${commitMessage} - Files: ${Array.from(changedFiles).join(', ')}\n`;
   fs.appendFileSync(path.join(LOGS_DIR, 'commits.log'), logEntry);
