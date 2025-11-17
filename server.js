@@ -41,7 +41,13 @@ const LOGS_DIR = path.join(__dirname, "logs");
 const changedFiles = new Set();
 
 // GitHub API client
-const octokit = new Octokit({ auth: process.env.GH_TOKEN });
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+const GITHUB_USER = process.env.GITHUB_USER;
+const GITHUB_EMAIL = process.env.GITHUB_EMAIL;
+const GITHUB_REPO = process.env.GITHUB_REPO; // e.g. "username/repo"
+
+// Git Setup (kept for other endpoints, but commits use API)
 
 // Middleware --------------------------------------------------
 
