@@ -8,7 +8,6 @@ const path = require("path");
 const { exec } = require("child_process");
 const archiver = require("archiver");
 const os = require("os");
-const { Octokit } = require("@octokit/rest");
 
 // ---- FIX: Load env vars BEFORE anything uses them ----
 const GITHUB_USER = process.env.GITHUB_USER;
@@ -18,6 +17,12 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const HEROKU_APP = process.env.HEROKU_APP;
 const HEROKU_API_KEY = process.env.HEROKU_API_KEY;
 
+if (!GITHUB_REPO || !GITHUB_TOKEN) {
+  console.error("Missing GITHUB_REPO or GITHUB_TOKEN at startup.");
+} else {
+  console.log(`Loaded GITHUB_REPO: ${GITHUB_REPO}`);
+}
+
 // Directory constants
 const PUBLIC_DIR = path.join(__dirname, "public");
 const PYTHON_DIR = path.join(__dirname, "python_sandbox");
@@ -26,6 +31,7 @@ const LOGS_DIR = path.join(__dirname, "logs");
 // Track changed files for batch commits
 const changedFiles = new Set();
 
+const { Octokit } = require("@octokit/rest");
 // GitHub API client
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
