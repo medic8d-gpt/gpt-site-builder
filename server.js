@@ -21,10 +21,16 @@ const git = simpleGit({
   maxConcurrentProcesses: 1,
 });
 
-const GITHUB_USER = process.env.GH_USER;
-const GITHUB_EMAIL = process.env.GH_EMAIL;
-const GITHUB_TOKEN = process.env.GH_TOKEN;
-const GITHUB_REPO = process.env.GH_REPO; // e.g. "username/repo"
+// Configure Git with credentials
+(async () => {
+  try {
+    await git.addConfig('user.name', GITHUB_USER);
+    await git.addConfig('user.email', GITHUB_EMAIL);
+    await git.addRemote('origin', `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`);
+  } catch (err) {
+    console.error('Git config error:', err);
+  }
+})();
 const PUBLIC_DIR = path.join(__dirname, "public");
 const PYTHON_DIR = path.join(__dirname, "python_sandbox");
 
@@ -214,7 +220,32 @@ app.post("/commit-multiple", async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// 10. list-commits
+// 10. commit-changes  (Commit all current changes to GitHub)
+// ------------------------------------------------------------
+
+app.post("/commit-changes", async (req, res) => {
+  const { commit_message } = req.body;
+
+  if (!commit_message)
+    return res.status(400).json({ error: "Missing commit_message." });
+
+  try {
+    await git.add(".");
+    const status = await git.status();
+    if (status.modified.length === 0 && status.created.length === 0 && status.deleted.length === 0) {
+      return res.json({ success: true, message: "No changes to commit." });
+    }
+    await git.commit(commit_message);
+    await git.push("origin", "main");
+
+    res.json({ success: true, message: "Changes committed and pushed." });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// ------------------------------------------------------------
+// 11. list-commits
 // ------------------------------------------------------------
 
 app.get("/list-commits", async (req, res) => {
@@ -227,7 +258,7 @@ app.get("/list-commits", async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// 11. restore-commit
+// 12. restore-commit
 // ------------------------------------------------------------
 
 app.post("/restore-commit", async (req, res) => {
@@ -249,7 +280,11 @@ app.post("/restore-commit", async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// 12. backup-site
+// 13. backup-site
+// ------------------------------------------------------------
+
+// ------------------------------------------------------------
+// 13. backup-site
 // ------------------------------------------------------------
 
 app.get("/backup-site", (req, res) => {
@@ -268,7 +303,7 @@ app.get("/backup-site", (req, res) => {
 });
 
 // ------------------------------------------------------------
-// 13. logs
+// 14. logs
 // ------------------------------------------------------------
 
 app.get("/logs", (req, res) => {

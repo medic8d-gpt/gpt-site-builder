@@ -165,10 +165,10 @@
       }
     },
 
-    "/commit-multiple": {
+    "/commit-changes": {
       "post": {
-        "summary": "Commit multiple files to GitHub in a single commit",
-        "operationId": "commitMultiple",
+        "summary": "Commit all current changes to the GitHub repository",
+        "operationId": "commitChanges",
         "requestBody": {
           "required": true,
           "content": {
@@ -176,25 +176,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "files": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "filename": { "type": "string" },
-                        "content": { "type": "string" }
-                      },
-                      "required": ["filename", "content"]
-                    }
-                  },
                   "commit_message": { "type": "string" }
                 },
-                "required": ["files", "commit_message"]
+                "required": ["commit_message"]
               }
             }
           }
         },
-        "responses": { "200": { "description": "Multiple files committed." } }
+        "responses": { "200": { "description": "Changes committed to GitHub." } }
       }
     },
 
