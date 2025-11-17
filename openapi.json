@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Moonshit Architect API",
-    "version": "7.0.0",
-    "description": "Full-stack AI DevOps API enabling GPT to edit the website, upload assets, run Python, commit files to GitHub, trigger builds, download backups, and inspect logs."
+    "title": "Moonshit Architect API v2",
+    "version": "8.0.0",
+    "description": "Streamlined AI DevOps API with 15 endpoints for file management, Git commits, builds, logs, and system monitoring."
   },
   "servers": [
     {
@@ -12,141 +12,10 @@
     }
   ],
   "paths": {
-    "/update-site": {
+    "/file": {
       "post": {
-        "summary": "Create or update a text file in /public",
-        "operationId": "updateSiteFile",
+        "summary": "Create or update a file",
         "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": { "type": "string" },
-                  "content": { "type": "string" }
-                },
-                "required": ["filename", "content"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "File written successfully." } }
-      }
-    },
-
-    "/read-file": {
-      "post": {
-        "summary": "Read a file from /public",
-        "operationId": "readFile",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": { "type": "string" }
-                },
-                "required": ["filename"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "File content returned." } }
-      }
-    },
-
-    "/delete-file": {
-      "post": {
-        "summary": "Delete a file in /public",
-        "operationId": "deleteFile",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": { "type": "string" }
-                },
-                "required": ["filename"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "File deleted." } }
-      }
-    },
-
-    "/list-files": {
-      "get": {
-        "summary": "List all files in /public recursively",
-        "operationId": "listFiles",
-        "responses": { "200": { "description": "Files listed." } }
-      }
-    },
-
-    "/upload-asset": {
-      "post": {
-        "summary": "Upload binary asset to /public using base64",
-        "operationId": "uploadAsset",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": { "type": "string" },
-                  "base64": { "type": "string" }
-                },
-                "required": ["filename", "base64"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "Asset uploaded." } }
-      }
-    },
-
-    "/trigger-build": {
-      "post": {
-        "summary": "Trigger the site build pipeline",
-        "operationId": "triggerBuild",
-        "responses": { "200": { "description": "Build triggered." } }
-      }
-    },
-
-    "/run-python": {
-      "post": {
-        "summary": "Execute a Python script inside the sandbox",
-        "operationId": "runPython",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": { "type": "string" },
-                  "code": { "type": "string" }
-                },
-                "required": ["filename", "code"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "Python executed." } }
-      }
-    },
-
-    "/commit-file": {
-      "post": {
-        "summary": "Commit a single file to the GitHub repository",
-        "operationId": "commitFile",
-        "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -154,60 +23,215 @@
                 "properties": {
                   "filename": { "type": "string" },
                   "content": { "type": "string" },
-                  "commit_message": { "type": "string" }
+                  "base64": { "type": "boolean" }
                 },
-                "required": ["filename", "content", "commit_message"]
+                "required": ["filename"]
               }
             }
           }
         },
-        "responses": { "200": { "description": "File committed to GitHub." } }
+        "responses": { "200": { "description": "File created/updated" } }
+      },
+      "get": {
+        "summary": "Read a file",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "schema": { "type": "string" },
+            "required": true
+          }
+        ],
+        "responses": { "200": { "description": "File content" } }
+      },
+      "delete": {
+        "summary": "Delete a file",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "schema": { "type": "string" },
+            "required": true
+          }
+        ],
+        "responses": { "200": { "description": "File deleted" } }
       }
     },
-
-    "/commit-changes": {
+    "/files": {
+      "get": {
+        "summary": "List files in /public",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "dir",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "File list" } }
+      }
+    },
+    "/commit": {
       "post": {
-        "summary": "Commit all current changes to the GitHub repository",
-        "operationId": "commitChanges",
+        "summary": "Commit changes to GitHub",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "commit_message": { "type": "string" }
+                  "commit_message": { "type": "string" },
+                  "dry_run": { "type": "boolean" }
                 },
                 "required": ["commit_message"]
               }
             }
           }
         },
-        "responses": { "200": { "description": "Changes committed to GitHub." } }
+        "responses": { "200": { "description": "Committed" } }
       }
     },
-
-    "/list-commits": {
-      "get": {
-        "summary": "View recent GitHub commit history",
-        "operationId": "listCommits",
-        "responses": { "200": { "description": "Commit history returned." } }
+    "/build": {
+      "post": {
+        "summary": "Run shell command",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "command": { "type": "string" }
+                },
+                "required": ["command"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Command output" } }
       }
     },
-
-    "/backup-site": {
-      "get": {
-        "summary": "Download a full ZIP backup of the site",
-        "operationId": "backupSite",
-        "responses": { "200": { "description": "ZIP backup returned." } }
+    "/run-python": {
+      "post": {
+        "summary": "Execute Python code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "code": { "type": "string" },
+                  "timeout": { "type": "number" }
+                },
+                "required": ["filename", "code"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Execution result" } }
       }
     },
-
     "/logs": {
       "get": {
-        "summary": "Retrieve server logs",
-        "operationId": "getLogs",
-        "responses": { "200": { "description": "Logs returned." } }
+        "summary": "Fetch logs",
+        "parameters": [
+          {
+            "name": "lines",
+            "in": "query",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["commits", "system"] }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "Logs" } }
+      }
+    },
+    "/backup": {
+      "get": {
+        "summary": "Download backup ZIP",
+        "responses": { "200": { "description": "ZIP file" } }
+      }
+    },
+    "/env": {
+      "get": {
+        "summary": "Get environment variables",
+        "responses": { "200": { "description": "Env vars" } }
+      },
+      "post": {
+        "summary": "Set environment variables",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated" } }
+      }
+    },
+    "/status": {
+      "get": {
+        "summary": "System status",
+        "responses": { "200": { "description": "Status info" } }
+      }
+    },
+    "/diff": {
+      "get": {
+        "summary": "Compare local vs GitHub",
+        "responses": { "200": { "description": "Diff info" } }
+      }
+    },
+    "/exec": {
+      "post": {
+        "summary": "Run safe shell command",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "command": { "type": "string" }
+                },
+                "required": ["command"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Command output" } }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": { "200": { "description": "Healthy" }, "503": { "description": "Unhealthy" } }
+      }
+    },
+    "/repo": {
+      "get": {
+        "summary": "Get latest commit info",
+        "responses": { "200": { "description": "Commit info" } }
+      },
+      "post": {
+        "summary": "Sync from GitHub",
+        "responses": { "200": { "description": "Synced" } }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "System metrics",
+        "responses": { "200": { "description": "Metrics" } }
       }
     }
   }
