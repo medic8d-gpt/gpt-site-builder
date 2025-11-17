@@ -127,6 +127,11 @@ app.post("/update-site", (req, res) => {
     return res.status(400).json({ error: "Missing filename or content." });
 
   const filePath = path.join(PUBLIC_DIR, filename);
+  // Security check: ensure filePath is within PUBLIC_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+  }
+
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content);
 
@@ -163,6 +168,11 @@ app.post("/read-file", (req, res) => {
   if (!filename) return res.status(400).json({ error: "Missing filename." });
 
   const filePath = path.join(PUBLIC_DIR, filename);
+  // Security check: ensure filePath is within PUBLIC_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+  }
+
   if (!fs.existsSync(filePath))
     return res.status(404).json({ error: "File not found." });
 
@@ -179,6 +189,11 @@ app.post("/delete-file", (req, res) => {
   if (!filename) return res.status(400).json({ error: "Missing filename." });
 
   const filePath = path.join(PUBLIC_DIR, filename);
+  // Security check: ensure filePath is within PUBLIC_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+  }
+
   if (!fs.existsSync(filePath))
     return res.status(404).json({ error: "File not found." });
 
@@ -199,6 +214,11 @@ app.post("/upload-asset", (req, res) => {
     return res.status(400).json({ error: "Missing filename or base64." });
 
   const filePath = path.join(PUBLIC_DIR, filename);
+  // Security check: ensure filePath is within PUBLIC_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(PUBLIC_DIR))) {
+    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+  }
+
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
   const buffer = Buffer.from(base64, "base64");
@@ -231,6 +251,10 @@ app.post("/run-python", (req, res) => {
 
   const safeName = filename.endsWith(".py") ? filename : filename + ".py";
   const filePath = path.join(PYTHON_DIR, safeName);
+  // Security check: ensure filePath is within PYTHON_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(PYTHON_DIR))) {
+    return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+  }
 
   fs.writeFileSync(filePath, code);
 
@@ -259,6 +283,11 @@ app.post("/commit-file", async (req, res) => {
   try {
     const [owner, repo] = process.env.GITHUB_REPO.split('/');
     const filePath = path.join(__dirname, filename);
+    // Security check: ensure filePath is within project root
+    if (!path.resolve(filePath).startsWith(path.resolve(__dirname))) {
+      return res.status(400).json({ error: "Invalid filename: path traversal not allowed." });
+    }
+
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content);
 
