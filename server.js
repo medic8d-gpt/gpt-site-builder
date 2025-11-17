@@ -10,6 +10,7 @@ const archiver = require("archiver");
 const simpleGit = require("simple-git");
 const os = require("os");
 const { Octokit } = require("@octokit/rest");
+const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -357,14 +358,41 @@ app.get("/backup-site", (req, res) => {
 // 14. logs
 // ------------------------------------------------------------
 
-app.get("/logs", (req, res) => {
-  exec("heroku logs --num 200 --app $HEROKU_APP", (err, stdout, stderr) => {
-    res.json({
-      success: !err,
-      stdout: stdout || "",
-      stderr: stderr || "",
+app.get("/logs", async (req, res) => {
+  try {
+    // Create a log session
+    const sessionResponse = await fetch(`https://api.heroku.com/apps/${process.env.HEROKU_APP}/log-sessions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.HEROKU_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.heroku+json; version=3'
+      },
+      body: JSON.stringify({ lines: 200 })
     });
-  });
+
+    if (!sessionResponse.ok) {
+      throw new Error(`Heroku API error: ${sessionResponse.status}`);
+    }
+
+    const session = await sessionResponse.json();
+
+    // Fetch the logs
+    const logsResponse = await fetch(session.logplex_url);
+    const logs = await logsResponse.text();
+
+    res.json({
+      success: true,
+      stdout: logs,
+      stderr: "",
+    });
+  } catch (err) {
+    res.json({
+      success: false,
+      stdout: "",
+      stderr: err.message,
+    });
+  }
 });
 
 // ------------------------------------------------------------
