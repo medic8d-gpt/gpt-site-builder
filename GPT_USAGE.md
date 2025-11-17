@@ -53,14 +53,13 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - End of workflow: Always call this to persist changes.
 
-### 4. `/build` (POST) - Run Shell Command
-**Parameters**:
-- `command` (string): Shell command to execute
+### 4. `/build` (POST) - Run Build Command
+**Description**: Runs `npm run build` to build the project.
 
 **Response**: `{ "success": true, "stdout": "Output", "stderr": "" }`
 
 **AI Workflow Example**:
-- Build: `{"command": "npm run build"}`
+- Build: `POST /build` (no body needed)
 
 ### 5. `/run-python` (POST) - Execute Python
 **Parameters**:

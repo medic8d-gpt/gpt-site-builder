@@ -239,14 +239,11 @@ app.post('/commit', async (req, res) => {
 });
 
 // ------------------------------------------------------------
-// 4. /build - Run shell command
+// 4. /build - Run build command (npm run build)
 // ------------------------------------------------------------
 
 app.post('/build', (req, res) => {
-  const { command } = req.body;
-  if (!command) return res.status(400).json({ error: "Missing command." });
-
-  exec(command, { cwd: __dirname }, (err, stdout, stderr) => {
+  exec('npm run build', { cwd: __dirname }, (err, stdout, stderr) => {
     res.json({
       success: !err,
       stdout: stdout || "",

@@ -103,20 +103,7 @@
     "/build": {
       "post": {
         "operationId": "runBuildCommand",
-        "summary": "Run shell command",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "command": { "type": "string" }
-                },
-                "required": ["command"]
-              }
-            }
-          }
-        },
+        "summary": "Run build command (npm run build)",
         "responses": { "200": { "description": "Command output" } }
       }
     },
