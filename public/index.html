@@ -1,2 +1,96 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>GPT</title></head>
-<body><h1>GPT Controlled Site</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moonshit Architect</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --fg: #f1f1f1;
+      --accent: #4f46e5;
+      --card: #141420;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      overflow: hidden;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), #9b5de5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: glow 3s infinite alternate;
+    }
+    p {
+      font-size: 1.2rem;
+      max-width: 600px;
+      margin-top: 1rem;
+      opacity: 0.8;
+    }
+    @keyframes glow {
+      0% { text-shadow: 0 0 10px #4f46e5; }
+      100% { text-shadow: 0 0 25px #9b5de5; }
+    }
+    button {
+      margin-top: 2rem;
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 0.8rem 2rem;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    button:hover {
+      background: #6d5dfc;
+      transform: scale(1.05);
+    }
+    footer {
+      position: absolute;
+      bottom: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>Moonshit Architect</h1>
+  <p>A self-evolving AI devops engine that builds, maintains, and deploys entire digital ecosystems — autonomously.</p>
+  <button onclick="ignite()">Ignite Engine</button>
+  <footer>© 2025 Moonshit Architect — Engine v5.0</footer>
+  <script>
+    function ignite() {
+      const btn = document.querySelector('button');
+      btn.innerText = 'Running...';
+      btn.disabled = true;
+      let dots = 0;
+      const interval = setInterval(() => {
+        dots = (dots + 1) % 4;
+        btn.innerText = 'Running' + '.'.repeat(dots);
+      }, 500);
+      setTimeout(() => {
+        clearInterval(interval);
+        btn.innerText = 'Engine Active';
+        btn.style.background = '#22c55e';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
