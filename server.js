@@ -2,23 +2,27 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
 
+/* ----------------------------------------------
+   STATIC SITE ROOT
+---------------------------------------------- */
 const PUBLIC_DIR = path.join(__dirname, "public");
 
-// Ensure /public exists
 if (!fs.existsSync(PUBLIC_DIR)) {
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 }
 
-/* ================================
-   1. UPDATE / CREATE FILE
-================================ */
+app.use(express.static(PUBLIC_DIR));
+
+/* ----------------------------------------------
+   1. CREATE / UPDATE A FILE (TEXT FILES)
+---------------------------------------------- */
 app.post("/update-site", (req, res) => {
   const { filename, content } = req.body;
 
@@ -36,10 +40,9 @@ app.post("/update-site", (req, res) => {
   });
 });
 
-
-/* ================================
+/* ----------------------------------------------
    2. LIST FILES
-================================ */
+---------------------------------------------- */
 app.get("/list-files", (req, res) => {
   const walk = (dir) => {
     let results = [];
@@ -66,10 +69,9 @@ app.get("/list-files", (req, res) => {
   }
 });
 
-
-/* ================================
+/* ----------------------------------------------
    3. READ FILE
-================================ */
+---------------------------------------------- */
 app.post("/read-file", (req, res) => {
   const { filename } = req.body;
 
@@ -87,10 +89,9 @@ app.post("/read-file", (req, res) => {
   res.json({ filename, content });
 });
 
-
-/* ================================
+/* ----------------------------------------------
    4. DELETE FILE
-================================ */
+---------------------------------------------- */
 app.post("/delete-file", (req, res) => {
   const { filename } = req.body;
 
@@ -108,15 +109,16 @@ app.post("/delete-file", (req, res) => {
   res.json({ success: true, deleted: filename });
 });
 
-
-/* ================================
-   5. UPLOAD ASSET (BINARY BASE64)
-================================ */
+/* ----------------------------------------------
+   5. UPLOAD BINARY ASSET (BASE64)
+---------------------------------------------- */
 app.post("/upload-asset", (req, res) => {
   const { filename, base64 } = req.body;
 
   if (!filename || !base64) {
-    return res.status(400).json({ error: "Missing filename or base64 data." });
+    return res
+      .status(400)
+      .json({ error: "Missing filename or base64 data." });
   }
 
   const filePath = path.join(PUBLIC_DIR, filename);
@@ -130,22 +132,54 @@ app.post("/upload-asset", (req, res) => {
   });
 });
 
-
-/* ================================
-   6. TRIGGER BUILD (optional)
-================================ */
+/* ----------------------------------------------
+   6. TRIGGER BUILD (OPTIONAL)
+---------------------------------------------- */
 app.post("/trigger-build", (req, res) => {
   exec("npm run build", (err, stdout, stderr) => {
     if (err) {
       return res.status(500).json({ error: stderr || err.message });
     }
-
     res.json({ success: true, output: stdout });
   });
 });
 
+/* ----------------------------------------------
+   7. RUN PYTHON (SANDBOXED)
+---------------------------------------------- */
+const PYTHON_DIR = path.join(__dirname, "python_sandbox");
 
-// START SERVER
+if (!fs.existsSync(PYTHON_DIR)) {
+  fs.mkdirSync(PYTHON_DIR, { recursive: true });
+}
+
+app.post("/run-python", (req, res) => {
+  const { filename, code } = req.body;
+
+  if (!filename || !code) {
+    return res.status(400).json({ error: "Missing filename or code." });
+  }
+
+  const safeName = filename.endsWith(".py") ? filename : filename + ".py";
+  const filePath = path.join(PYTHON_DIR, safeName);
+
+  fs.writeFileSync(filePath, code);
+
+  const command = `python3 -I -B -E -s "${filePath}"`;
+
+  exec(command, { cwd: PYTHON_DIR }, (err, stdout, stderr) => {
+    res.json({
+      success: !err,
+      filename: safeName,
+      stdout: stdout || "",
+      stderr: stderr || ""
+    });
+  });
+});
+
+/* ----------------------------------------------
+   START SERVER
+---------------------------------------------- */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
