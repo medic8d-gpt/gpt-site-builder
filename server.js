@@ -33,7 +33,7 @@ const changedFiles = new Set();
 
 const { Octokit } = require("@octokit/rest");
 // GitHub API client
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,7 +54,7 @@ if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
 
 // Function to commit all changes via GitHub API
 async function commitAllChanges(commitMessage) {
-  const [owner, repo] = GITHUB_REPO.split('/');
+  const [owner, repo] = process.env.GITHUB_REPO.split('/');
   // Get latest commit SHA
   const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
   const latestCommitSha = ref.object.sha;
@@ -227,7 +227,7 @@ app.post("/commit-file", async (req, res) => {
     return res.status(400).json({ error: "Missing fields." });
 
   try {
-    const [owner, repo] = GITHUB_REPO.split('/');
+    const [owner, repo] = process.env.GITHUB_REPO.split('/');
     const filePath = path.join(__dirname, filename);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content);
@@ -281,7 +281,7 @@ app.post("/commit-changes", async (req, res) => {
 
 app.get("/list-commits", async (req, res) => {
   try {
-    const [owner, repo] = GITHUB_REPO.split('/');
+    const [owner, repo] = process.env.GITHUB_REPO.split('/');
     const { data: commits } = await octokit.repos.listCommits({ owner, repo, per_page: 50 });
     res.json({ success: true, commits });
   } catch (err) {
