@@ -108,18 +108,7 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - Quick saves: For single edits without batching.
 
-### 9. `/commit-multiple` (POST) - Commit Multiple Files
-**Purpose**: Write and commit several files at once.
-
-**Parameters**:
-- `files` (array): [{filename, content}], `commit_message`.
-
-**Response**: `{ "success": true, "committed": 3 }`
-
-**AI Workflow Example**:
-- Batch updates: After generating multiple pages.
-
-### 10. `/commit-changes` (POST) - Commit All Tracked Changes
+### 9. `/commit-changes` (POST) - Commit All Tracked Changes
 **Purpose**: Commit all files modified via `/update-site`, `/upload-asset`, etc.
 
 **Parameters**:
@@ -130,7 +119,7 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - End of workflow: Always call this to persist changes and trigger redeploys.
 
-### 11. `/list-commits` (GET) - List Git Commits
+### 10. `/list-commits` (GET) - List Git Commits
 **Purpose**: Get recent commit history.
 
 **Parameters**: None.
@@ -140,18 +129,7 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - Audit: Check history for rollbacks.
 
-### 12. `/restore-commit` (POST) - Restore File from Commit
-**Purpose**: Revert a file to a previous version.
-
-**Parameters**:
-- `commit_hash`, `filename`.
-
-**Response**: `{ "success": true }`
-
-**AI Workflow Example**:
-- Undo: If an edit goes wrong, restore.
-
-### 13. `/backup-site` (GET) - Download Site Backup
+### 11. `/backup-site` (GET) - Download Site Backup
 **Purpose**: Get a ZIP of `public/` and `python_sandbox/`.
 
 **Parameters**: None.
@@ -161,7 +139,7 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 **AI Workflow Example**:
 - Backup before major changes.
 
-### 14. `/logs` (GET) - Fetch Heroku Logs
+### 12. `/logs` (GET) - Fetch Heroku Logs
 **Purpose**: Get recent server logs.
 
 **Parameters**: None.
@@ -192,7 +170,7 @@ The API is hosted at `https://gpt-site-live-78f2a81c6107.herokuapp.com` and prov
 1. Create product pages in a loop using `/update-site`.
 2. Run Python for inventory calculations.
 3. Handle payments via external APIs in Python.
-4. Batch commit with `/commit-multiple`.
+4. Batch commit with `/commit-changes`.
 5. Trigger builds for optimization.
 6. Backup regularly with `/backup-site`.
 

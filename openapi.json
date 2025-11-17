@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moonshit Architect API",
-    "version": "6.0.0",
-    "description": "Full-stack AI DevOps API enabling GPT to edit the website, upload assets, run Python, commit files to GitHub, restore history, trigger builds, download backups, and inspect logs."
+    "version": "7.0.0",
+    "description": "Full-stack AI DevOps API enabling GPT to edit the website, upload assets, run Python, commit files to GitHub, trigger builds, download backups, and inspect logs."
   },
   "servers": [
     {
@@ -192,29 +192,6 @@
         "summary": "View recent GitHub commit history",
         "operationId": "listCommits",
         "responses": { "200": { "description": "Commit history returned." } }
-      }
-    },
-
-    "/restore-commit": {
-      "post": {
-        "summary": "Restore a file from a given commit hash",
-        "operationId": "restoreCommit",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "commit_hash": { "type": "string" },
-                  "filename": { "type": "string" }
-                },
-                "required": ["commit_hash", "filename"]
-              }
-            }
-          }
-        },
-        "responses": { "200": { "description": "File restored from history." } }
       }
     },
 
