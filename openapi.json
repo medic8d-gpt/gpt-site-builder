@@ -14,6 +14,7 @@
   "paths": {
     "/file": {
       "post": {
+        "operationId": "createOrUpdateFile",
         "summary": "Create or update a file",
         "requestBody": {
           "content": {
@@ -33,6 +34,7 @@
         "responses": { "200": { "description": "File created/updated" } }
       },
       "get": {
+        "operationId": "readFile",
         "summary": "Read a file",
         "parameters": [
           {
@@ -45,6 +47,7 @@
         "responses": { "200": { "description": "File content" } }
       },
       "delete": {
+        "operationId": "deleteFile",
         "summary": "Delete a file",
         "parameters": [
           {
@@ -59,6 +62,7 @@
     },
     "/files": {
       "get": {
+        "operationId": "listFiles",
         "summary": "List files in /public",
         "parameters": [
           {
@@ -77,6 +81,7 @@
     },
     "/commit": {
       "post": {
+        "operationId": "commitChanges",
         "summary": "Commit changes to GitHub",
         "requestBody": {
           "content": {
@@ -97,6 +102,7 @@
     },
     "/build": {
       "post": {
+        "operationId": "runBuildCommand",
         "summary": "Run shell command",
         "requestBody": {
           "content": {
@@ -116,6 +122,7 @@
     },
     "/run-python": {
       "post": {
+        "operationId": "executePython",
         "summary": "Execute Python code",
         "requestBody": {
           "content": {
@@ -137,6 +144,7 @@
     },
     "/logs": {
       "get": {
+        "operationId": "fetchLogs",
         "summary": "Fetch logs",
         "parameters": [
           {
@@ -160,21 +168,27 @@
     },
     "/backup": {
       "get": {
+        "operationId": "downloadBackup",
         "summary": "Download backup ZIP",
         "responses": { "200": { "description": "ZIP file" } }
       }
     },
     "/env": {
       "get": {
+        "operationId": "getEnvironmentVariables",
         "summary": "Get environment variables",
         "responses": { "200": { "description": "Env vars" } }
       },
       "post": {
+        "operationId": "setEnvironmentVariables",
         "summary": "Set environment variables",
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "type": "object" }
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
             }
           }
         },
@@ -183,18 +197,21 @@
     },
     "/status": {
       "get": {
+        "operationId": "getSystemStatus",
         "summary": "System status",
         "responses": { "200": { "description": "Status info" } }
       }
     },
     "/diff": {
       "get": {
+        "operationId": "getDiff",
         "summary": "Compare local vs GitHub",
         "responses": { "200": { "description": "Diff info" } }
       }
     },
     "/exec": {
       "post": {
+        "operationId": "runSafeCommand",
         "summary": "Run safe shell command",
         "requestBody": {
           "content": {
@@ -214,22 +231,26 @@
     },
     "/health": {
       "get": {
+        "operationId": "healthCheck",
         "summary": "Health check",
         "responses": { "200": { "description": "Healthy" }, "503": { "description": "Unhealthy" } }
       }
     },
     "/repo": {
       "get": {
+        "operationId": "getLatestCommit",
         "summary": "Get latest commit info",
         "responses": { "200": { "description": "Commit info" } }
       },
       "post": {
+        "operationId": "syncFromGitHub",
         "summary": "Sync from GitHub",
         "responses": { "200": { "description": "Synced" } }
       }
     },
     "/metrics": {
       "get": {
+        "operationId": "getMetrics",
         "summary": "System metrics",
         "responses": { "200": { "description": "Metrics" } }
       }
