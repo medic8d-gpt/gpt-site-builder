@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "GPT Website Control API",
-    "version": "2.0.0",
-    "description": "Full API to let a GPT create, edit, read, delete, upload, list, and build website files on the Heroku server."
+    "version": "3.0.0",
+    "description": "Full API for GPT to create, edit, read, delete, upload, list, build, and execute Python scripts on the Heroku server."
   },
   "servers": [
     {
@@ -31,33 +31,14 @@
             }
           }
         },
-        "responses": {
-          "200": { "description": "File written successfully." }
-        }
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/list-files": {
       "get": {
-        "summary": "List all files in /public",
+        "summary": "List all files in /public recursively",
         "operationId": "listFiles",
-        "responses": {
-          "200": {
-            "description": "List of files.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "files": {
-                      "type": "array",
-                      "items": { "type": "string" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/read-file": {
@@ -78,9 +59,7 @@
             }
           }
         },
-        "responses": {
-          "200": { "description": "Returns file content." }
-        }
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/delete-file": {
@@ -101,9 +80,7 @@
             }
           }
         },
-        "responses": {
-          "200": { "description": "File deleted." }
-        }
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/upload-asset": {
@@ -125,18 +102,36 @@
             }
           }
         },
-        "responses": {
-          "200": { "description": "Asset uploaded." }
-        }
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/trigger-build": {
       "post": {
         "summary": "Run the site build script",
         "operationId": "triggerBuild",
-        "responses": {
-          "200": { "description": "Build triggered." }
-        }
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/run-python": {
+      "post": {
+        "summary": "Save + execute a Python script inside a sandbox",
+        "operationId": "runPython",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "code": { "type": "string" }
+                },
+                "required": ["filename", "code"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Execution result." } }
       }
     }
   }
