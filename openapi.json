@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "GPT Website Control API",
-    "version": "3.0.0",
-    "description": "Full API for GPT to create, edit, read, delete, upload, list, build, and execute Python scripts on the Heroku server."
+    "title": "Moonshit Architect API",
+    "version": "5.0.0",
+    "description": "Full-stack AI DevOps API enabling GPT to edit the website, upload assets, run Python, commit files to GitHub, restore history, trigger builds, download backups, and inspect logs."
   },
   "servers": [
     {
@@ -31,16 +31,10 @@
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
+        "responses": { "200": { "description": "File written successfully." } }
       }
     },
-    "/list-files": {
-      "get": {
-        "summary": "List all files in /public recursively",
-        "operationId": "listFiles",
-        "responses": { "200": { "description": "OK" } }
-      }
-    },
+
     "/read-file": {
       "post": {
         "summary": "Read a file from /public",
@@ -59,9 +53,10 @@
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
+        "responses": { "200": { "description": "File content returned." } }
       }
     },
+
     "/delete-file": {
       "post": {
         "summary": "Delete a file in /public",
@@ -80,12 +75,21 @@
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
+        "responses": { "200": { "description": "File deleted." } }
       }
     },
+
+    "/list-files": {
+      "get": {
+        "summary": "List all files in /public recursively",
+        "operationId": "listFiles",
+        "responses": { "200": { "description": "Files listed." } }
+      }
+    },
+
     "/upload-asset": {
       "post": {
-        "summary": "Upload binary asset using base64",
+        "summary": "Upload binary asset to /public using base64",
         "operationId": "uploadAsset",
         "requestBody": {
           "required": true,
@@ -102,19 +106,21 @@
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
+        "responses": { "200": { "description": "Asset uploaded." } }
       }
     },
+
     "/trigger-build": {
       "post": {
-        "summary": "Run the site build script",
+        "summary": "Trigger the site build pipeline",
         "operationId": "triggerBuild",
-        "responses": { "200": { "description": "OK" } }
+        "responses": { "200": { "description": "Build triggered." } }
       }
     },
+
     "/run-python": {
       "post": {
-        "summary": "Save + execute a Python script inside a sandbox",
+        "summary": "Execute a Python script inside the sandbox",
         "operationId": "runPython",
         "requestBody": {
           "required": true,
@@ -131,7 +137,111 @@
             }
           }
         },
-        "responses": { "200": { "description": "Execution result." } }
+        "responses": { "200": { "description": "Python executed." } }
+      }
+    },
+
+    "/commit-file": {
+      "post": {
+        "summary": "Commit a single file to the GitHub repository",
+        "operationId": "commitFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "content": { "type": "string" },
+                  "commit_message": { "type": "string" }
+                },
+                "required": ["filename", "content", "commit_message"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "File committed to GitHub." } }
+      }
+    },
+
+    "/commit-multiple": {
+      "post": {
+        "summary": "Commit multiple files to GitHub in a single commit",
+        "operationId": "commitMultiple",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "filename": { "type": "string" },
+                        "content": { "type": "string" }
+                      },
+                      "required": ["filename", "content"]
+                    }
+                  },
+                  "commit_message": { "type": "string" }
+                },
+                "required": ["files", "commit_message"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Multiple files committed." } }
+      }
+    },
+
+    "/list-commits": {
+      "get": {
+        "summary": "View recent GitHub commit history",
+        "operationId": "listCommits",
+        "responses": { "200": { "description": "Commit history returned." } }
+      }
+    },
+
+    "/restore-commit": {
+      "post": {
+        "summary": "Restore a file from a given commit hash",
+        "operationId": "restoreCommit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commit_hash": { "type": "string" },
+                  "filename": { "type": "string" }
+                },
+                "required": ["commit_hash", "filename"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "File restored from history." } }
+      }
+    },
+
+    "/backup-site": {
+      "get": {
+        "summary": "Download a full ZIP backup of the site",
+        "operationId": "backupSite",
+        "responses": { "200": { "description": "ZIP backup returned." } }
+      }
+    },
+
+    "/logs": {
+      "get": {
+        "summary": "Retrieve server logs",
+        "operationId": "getLogs",
+        "responses": { "200": { "description": "Logs returned." } }
       }
     }
   }
