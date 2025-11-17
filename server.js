@@ -9,6 +9,7 @@ const { exec } = require("child_process");
 const archiver = require("archiver");
 const simpleGit = require("simple-git");
 const os = require("os");
+const { Octokit } = require("@octokit/rest");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,6 +34,13 @@ const git = simpleGit({
 })();
 const PUBLIC_DIR = path.join(__dirname, "public");
 const PYTHON_DIR = path.join(__dirname, "python_sandbox");
+const LOGS_DIR = path.join(__dirname, "logs");
+
+// Track changed files for batch commits
+const changedFiles = new Set();
+
+// GitHub API client
+const octokit = new Octokit({ auth: process.env.GH_TOKEN });
 
 // Middleware --------------------------------------------------
 
@@ -43,6 +51,41 @@ app.use(express.static(PUBLIC_DIR));
 // Ensure directories exist
 if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 if (!fs.existsSync(PYTHON_DIR)) fs.mkdirSync(PYTHON_DIR, { recursive: true });
+if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
+
+// Function to commit all changes via GitHub API
+async function commitAllChanges(commitMessage) {
+  const [owner, repo] = GITHUB_REPO.split('/');
+  // Get latest commit SHA
+  const { data: ref } = await octokit.git.getRef({ owner, repo, ref: 'heads/main' });
+  const latestCommitSha = ref.object.sha;
+  // Get commit and tree
+  const { data: commit } = await octokit.git.getCommit({ owner, repo, sha: latestCommitSha });
+  const baseTreeSha = commit.tree.sha;
+  // Create tree entries for changed files
+  const tree = [];
+  for (const filename of changedFiles) {
+    const filePath = path.join(PUBLIC_DIR, filename);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const { data: blob } = await octokit.git.createBlob({ owner, repo, content, encoding: 'utf-8' });
+      tree.push({ path: filename, mode: '100644', type: 'blob', sha: blob.sha });
+    }
+  }
+  if (tree.length === 0) {
+    throw new Error('No changes to commit');
+  }
+  // Create new tree
+  const { data: newTree } = await octokit.git.createTree({ owner, repo, base_tree: baseTreeSha, tree });
+  // Create commit
+  const { data: newCommit } = await octokit.git.createCommit({ owner, repo, message: commitMessage, tree: newTree.sha, parents: [latestCommitSha] });
+  // Update ref
+  await octokit.git.updateRef({ owner, repo, ref: 'heads/main', sha: newCommit.sha });
+  // Log
+  const logEntry = `${new Date().toISOString()} - Committed changes: ${commitMessage} - Files: ${Array.from(changedFiles).join(', ')}\n`;
+  fs.appendFileSync(path.join(LOGS_DIR, 'commits.log'), logEntry);
+  changedFiles.clear();
+}
 
 // ------------------------------------------------------------
 // 1. update-site  (Create/overwrite text files)
@@ -57,6 +100,8 @@ app.post("/update-site", (req, res) => {
   const filePath = path.join(PUBLIC_DIR, filename);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content);
+
+  changedFiles.add(filename);
 
   res.json({ success: true, file: filename });
 });
@@ -110,6 +155,8 @@ app.post("/delete-file", (req, res) => {
 
   fs.unlinkSync(filePath);
   res.json({ success: true, deleted: filename });
+
+  changedFiles.add(filename);
 });
 
 // ------------------------------------------------------------
@@ -127,6 +174,8 @@ app.post("/upload-asset", (req, res) => {
 
   const buffer = Buffer.from(base64, "base64");
   fs.writeFileSync(filePath, buffer);
+
+  changedFiles.add(filename);
 
   res.json({ success: true, file: filename });
 });
@@ -179,13 +228,21 @@ app.post("/commit-file", async (req, res) => {
     return res.status(400).json({ error: "Missing fields." });
 
   try {
+    const [owner, repo] = GITHUB_REPO.split('/');
     const filePath = path.join(__dirname, filename);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content);
 
-    await git.add(filePath);
-    await git.commit(commit_message);
-    await git.push("origin", "main");
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: filename,
+      message: commit_message,
+      content: Buffer.from(content).toString('base64'),
+    });
+
+    const logEntry = `${new Date().toISOString()} - Committed file: ${filename} - ${commit_message}\n`;
+    fs.appendFileSync(path.join(LOGS_DIR, 'commits.log'), logEntry);
 
     res.json({ success: true, committed: filename });
   } catch (err) {
@@ -230,14 +287,7 @@ app.post("/commit-changes", async (req, res) => {
     return res.status(400).json({ error: "Missing commit_message." });
 
   try {
-    await git.add(".");
-    const status = await git.status();
-    if (status.modified.length === 0 && status.created.length === 0 && status.deleted.length === 0) {
-      return res.json({ success: true, message: "No changes to commit." });
-    }
-    await git.commit(commit_message);
-    await git.push("origin", "main");
-
+    await commitAllChanges(commit_message);
     res.json({ success: true, message: "Changes committed and pushed." });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -250,8 +300,9 @@ app.post("/commit-changes", async (req, res) => {
 
 app.get("/list-commits", async (req, res) => {
   try {
-    const logs = await git.log({ maxCount: 50 });
-    res.json({ success: true, commits: logs.all });
+    const [owner, repo] = GITHUB_REPO.split('/');
+    const { data: commits } = await octokit.repos.listCommits({ owner, repo, per_page: 50 });
+    res.json({ success: true, commits });
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
