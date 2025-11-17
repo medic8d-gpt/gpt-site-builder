@@ -19,6 +19,14 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const HEROKU_APP = process.env.HEROKU_APP;
 const HEROKU_API_KEY = process.env.HEROKU_API_KEY;
 
+// Directory constants
+const PUBLIC_DIR = path.join(__dirname, "public");
+const PYTHON_DIR = path.join(__dirname, "python_sandbox");
+const LOGS_DIR = path.join(__dirname, "logs");
+
+// Track changed files for batch commits
+const changedFiles = new Set();
+
 // GitHub API client
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
