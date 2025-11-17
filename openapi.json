@@ -1,46 +1,58 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "GPT Site API",
-    "version": "1.0.0"
+    "title": "GPT Website Control API",
+    "version": "2.0.0",
+    "description": "Full API for GPT to create, edit, delete, list, upload, and build files on the Heroku website."
   },
+  "servers": [
+    {
+      "url": "https://gpt-site-live-78f2a81c6107.herokuapp.com",
+      "description": "Production Server"
+    }
+  ],
   "paths": {
     "/update-site": {
       "post": {
-        "summary": "Write or update a file on the live site",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "filename": {
-                    "type": "string"
-                  },
-                  "content": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "filename",
-                  "content"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
+        "summary": "Create or update a text-based file in /public",
+        "operationId": "updateSite",
+        "requestBody": { "required": true },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/list-files": {
+      "get": {
+        "summary": "List all files in /public recursively",
+        "operationId": "listFiles",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/read-file": {
+      "post": {
+        "summary": "Read the content of a file in /public",
+        "operationId": "readFile",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/delete-file": {
+      "post": {
+        "summary": "Delete a file in /public",
+        "operationId": "deleteFile",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/upload-asset": {
+      "post": {
+        "summary": "Upload binary file (images/audio/etc) using base64",
+        "operationId": "uploadAsset",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/trigger-build": {
+      "post": {
+        "summary": "Trigger a site build (React/Vite/Static Generator)",
+        "operationId": "triggerBuild",
+        "responses": { "200": { "description": "OK" } }
       }
     }
   }
