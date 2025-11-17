@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "A GPT-controlled website deployed automatically to Heroku.",
   "main": "server.js",
-  "scripts": {"start": "node server.js"},
-  "dependencies": {"express": "^4.18.3","body-parser": "^1.20.2"}
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "body-parser": "^1.20.2",
+    "express": "^4.21.2",
+    "simple-git": "^3.30.0"
+  }
 }
