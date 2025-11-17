@@ -7,7 +7,6 @@ const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
 const archiver = require("archiver");
-const simpleGit = require("simple-git");
 const os = require("os");
 const { Octokit } = require("@octokit/rest");
 
@@ -33,24 +32,8 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Git Setup --------------------------------------------------
-
-const git = simpleGit({
-  baseDir: __dirname,
-  binary: "git",
-  maxConcurrentProcesses: 1,
-});
-
-// Configure Git with credentials
-(async () => {
-  try {
-    await git.addConfig('user.name', GITHUB_USER);
-    await git.addConfig('user.email', GITHUB_EMAIL);
-    await git.addRemote('origin', `https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`);
-  } catch (err) {
-    console.error('Git config error:', err);
-  }
-})();
+// Skip local git setup — Octokit handles commits directly
+console.log("Skipping simple-git setup (no git binary in environment)");
 
 // Middleware --------------------------------------------------
 
@@ -265,25 +248,7 @@ app.post("/commit-file", async (req, res) => {
 // ------------------------------------------------------------
 
 app.post("/commit-multiple", async (req, res) => {
-  const { files, commit_message } = req.body;
-
-  if (!files || !commit_message)
-    return res.status(400).json({ error: "Missing fields." });
-
-  try {
-    for (let f of files) {
-      const filePath = path.join(__dirname, f.filename);
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, f.content);
-      await git.add(filePath);
-    }
-    await git.commit(commit_message);
-    await git.push("origin", "main");
-
-    res.json({ success: true, committed: files.length });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
+  res.json({ success: false, error: "Git not available in this environment. Use /commit-file or /commit-changes instead." });
 });
 
 // ------------------------------------------------------------
@@ -323,21 +288,7 @@ app.get("/list-commits", async (req, res) => {
 // ------------------------------------------------------------
 
 app.post("/restore-commit", async (req, res) => {
-  const { commit_hash, filename } = req.body;
-
-  if (!commit_hash || !filename)
-    return res.status(400).json({ error: "Missing fields." });
-
-  try {
-    await git.checkout(commit_hash, [filename]);
-    await git.add(filename);
-    await git.commit(`Restore ${filename} from ${commit_hash}`);
-    await git.push("origin", "main");
-
-    res.json({ success: true });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
+  res.json({ success: false, error: "Git not available in this environment. Use GitHub API directly for restores." });
 });
 
 // ------------------------------------------------------------
