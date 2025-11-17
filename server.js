@@ -10,7 +10,6 @@ const archiver = require("archiver");
 const simpleGit = require("simple-git");
 const os = require("os");
 const { Octokit } = require("@octokit/rest");
-const fetch = require("node-fetch");
 
 // ---- FIX: Load env vars BEFORE anything uses them ----
 const GITHUB_USER = process.env.GITHUB_USER;
